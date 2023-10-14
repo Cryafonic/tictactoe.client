@@ -1,0 +1,5 @@
+
+<input placeholder="Name" name="User" ngModel required #User>
+<button (click)="onHost(User.value)">Host Game</button>
+<input placeholder="Session key" name="sessionKey" ngModel required #sessionKey>
+<button (click)="onJoin(sessionKey.value, User.value)">Join Game</button>
