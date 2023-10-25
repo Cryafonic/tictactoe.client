@@ -1,58 +1,35 @@
-import {Component, Input} from '@angular/core';
-import {HubConnection, HubConnectionBuilder, LogLevel} from "@microsoft/signalr";
+import {Component, Input, OnInit} from '@angular/core';
 import {ActivatedRoute, Router} from "@angular/router";
-import {UserConnection} from "../SharedClasses/UserConnection";
+import {HubConnectionService} from "../hub-connection-service.service";
+import {Subscription} from "rxjs";
+import {HubConnection, HubConnectionBuilder, LogLevel} from "@microsoft/signalr";
 
 @Component({
   selector: 'app-game',
   templateUrl: './game.component.html',
   styleUrls: ['./game.component.css']
 })
-export class GameComponent {
+export class GameComponent implements OnInit {
   user = localStorage.getItem("user");
   sessionKey = getSessionkey(this.activeRoute);
-  connection = new HubConnectionBuilder().withUrl('https://localhost:7174').configureLogging(LogLevel.Information).build();
+  private sessionSubscription: Subscription = new Subscription();
+  public sessionMessages: string[] = [];
+  private connection: HubConnection = new HubConnectionBuilder().withUrl('https://localhost:7174/tictactoe').configureLogging(LogLevel.Information).build();
 
-  constructor(private activeRoute: ActivatedRoute, private router: Router) {
-    console.log(this.connection);
+  constructor(private activeRoute: ActivatedRoute, private router: Router, private hubConnectionService: HubConnectionService) {
   }
 
   ngOnInit() {
-    joinAndStartSession(this.user != null ? this.user : "", this.sessionKey, this.router, this.connection);
+    this.sessionSubscription = this.hubConnectionService.getSessionObservable().subscribe((message) => {
+      this.sessionMessages.push(message);
+    });
+
+    console.log(this.connection);
   }
 
   onStart() {
-    startGame(this.user != null ? this.user : "", this.sessionKey, this.connection);
+    this.hubConnectionService.StartGame(this.user == null ? '' : this.user, this.sessionKey);
   }
-}
-
-async function startGame(user: string, sessionKey: string, connection: HubConnection) {
-
-  const userConnection = new UserConnection();
-  userConnection.user = user;
-  userConnection.session = sessionKey;
-  await connection.invoke("StartGame", userConnection);
-}
-
-async function joinAndStartSession(user: string, sessionKey: string, router: Router, connection: HubConnection) {
-  connection.on("session", (serverMessage) => {
-    const sessionMessagesDiv = document.querySelector('#SessionMessages');
-    if (sessionMessagesDiv != null) {
-      sessionMessagesDiv.innerHTML += `<br><p>${serverMessage}</p>`;
-    }
-  });
-
-  connection.on("boardRoute", (canRoute) => {
-    if (canRoute) {
-      router.navigate(['board']);
-    }
-  });
-
-  await connection.start();
-  const userConnection = new UserConnection();
-  userConnection.user = user;
-  userConnection.session = sessionKey;
-  await connection.invoke("JoinSession", userConnection);
 }
 
 function getSessionkey(activatedRoute: ActivatedRoute) {

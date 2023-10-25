@@ -1,32 +1,25 @@
-import {Component, OnInit, OnChanges, SimpleChanges, Input} from '@angular/core';
+import {Component, OnInit, SimpleChanges, Input} from '@angular/core';
 import {ActivatedRoute, Router} from "@angular/router";
-import {UserConnection} from "./SharedClasses/UserConnection";
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit, OnChanges {
-  @Input() isSignedIn: boolean = false;
-  @Input() username: string = "";
-  @Input() sessionKey: string = "";
-
-  constructor(private activatedRoute: ActivatedRoute) {
+export class AppComponent implements OnInit {
+  constructor(private activatedRoute: ActivatedRoute, private route: Router) {
   }
 
   ngOnInit() {
-    this.isSignedIn = CheckSignedIn(this.activatedRoute);
-  }
-
-  InitGame(Credentials: UserConnection) {
-    this.username = Credentials.user;
-    this.sessionKey = Credentials.session;
-  }
-
-  ngOnChanges(changes: SimpleChanges): void {
-    console.log(changes['sessionKey'].currentValue);
-    this.isSignedIn = CheckSignedIn(this.activatedRoute);
+    let isSignedIn = CheckSignedIn(this.activatedRoute);
+    if (isSignedIn) {
+      const paramSessionKey = localStorage.getItem('sessionKey');
+      const localSessionKey = this.activatedRoute.snapshot.paramMap.get('sessionKey');
+      const sessionkey: string = localSessionKey != null ? localSessionKey : paramSessionKey != null ? paramSessionKey : '';
+      this.route.navigate([`/game/${sessionkey}`]);
+    } else {
+      this.route.navigate([`/sign-in`]);
+    }
   }
 }
 
